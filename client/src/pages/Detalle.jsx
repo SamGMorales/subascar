@@ -6,7 +6,9 @@ import { useAuth } from '../AuthContext';
 import Carrusel from '../components/Carrusel';
 import Contador from '../components/Contador';
 import BadgeDanio from '../components/BadgeDanio';
-import { quetzales, fechaHora } from '../utils';
+import EstadoSubasta from '../components/EstadoSubasta';
+import Icono from '../components/Icono';
+import { quetzales, fechaHora, numeroLote, haceCuanto, nombresDanio } from '../utils';
 
 export default function Detalle() {
   const { id } = useParams();
@@ -101,26 +103,41 @@ export default function Detalle() {
   if (!v) return <p className="vacio">Cargando...</p>;
 
   const ficha = [
-    ['Año', v.anio],
-    ['Tipo de artículo', v.tipo],
-    ['Marca', v.marca],
-    ['Modelo', v.modelo],
-    ['Motor', v.motor],
-    ['Transmisión', v.transmision],
-    ['Combustible', v.combustible],
-    ['Tren de manejo', v.traccion],
-    ['Cilindros', v.cilindros],
-    ['Precio base', quetzales(v.precioBase)],
-    ['Inicio de subasta', fechaHora(v.inicio)],
-    ['Cierre de subasta', fechaHora(v.fin)]
+    ['calendario', 'Año', v.anio],
+    ['ruta', 'Tipo de artículo', v.tipo],
+    ['escudo', 'Marca', v.marca],
+    ['escudo', 'Modelo', v.modelo],
+    ['motor', 'Motor', v.motor],
+    ['engranaje', 'Cilindros', v.cilindros],
+    ['engranaje', 'Transmisión', v.transmision],
+    ['gota', 'Combustible', v.combustible],
+    ['ruta', 'Tren de manejo', v.traccion]
   ];
 
   const cerrada = estado === 'cerrada';
   const resultado = v.resultado || (v.totalPujas > 0 ? 'vendido' : 'desierta');
+  const minima = v.ofertaMinima;
+  // botones de puja rapida
+  const rapidas = [minima, Math.ceil(minima * 1.05), Math.ceil(minima * 1.15)];
 
   return (
     <div className="detalle">
-      <Link to="/" className="volver">← Volver al inventario</Link>
+      <div className="migas">
+        <Link to="/">Inventario</Link> / <span>{v.marca}</span> / <span>{v.modelo}</span> / <b>Lote {numeroLote(v.id)}</b>
+      </div>
+
+      <div className="detalle-encabezado">
+        <div>
+          <span className="fila-lote">LOTE {numeroLote(v.id)}</span>
+          <h1>{v.anio} {v.marca} {v.modelo}</h1>
+          <div className="detalle-etiquetas">
+            <EstadoSubasta v={{ ...v, estado: estado || v.estado, resultado }} />
+            <BadgeDanio danio={v.danio} />
+            <span className="etiqueta-gris"><Icono nombre="camara" tam={15} /> {v.fotos.length} fotos</span>
+            <span className="etiqueta-gris"><Icono nombre="martillo" tam={15} /> {v.totalPujas} ofertas</span>
+          </div>
+        </div>
+      </div>
 
       <div className="detalle-grid">
         <div>
@@ -128,95 +145,128 @@ export default function Detalle() {
 
           <div className="panel">
             <h2>Ficha técnica</h2>
-            <table className="ficha">
-              <tbody>
-                {ficha.map(([k, val]) => (
-                  <tr key={k}><th>{k}</th><td>{val}</td></tr>
-                ))}
-                <tr><th>Estado de daño</th><td><BadgeDanio danio={v.danio} /></td></tr>
-              </tbody>
-            </table>
-            {v.descripcion && <p className="descripcion">{v.descripcion}</p>}
+            <div className="ficha-grid">
+              {ficha.map(([ico, k, val]) => (
+                <div key={k} className="ficha-item">
+                  <Icono nombre={ico} tam={20} />
+                  <div><small>{k}</small><strong>{val}</strong></div>
+                </div>
+              ))}
+            </div>
+
+            <div className={'danio-detalle danio-' + v.danio}>
+              <span className="punto" />
+              <div>
+                <small>Clasificación por estado de daño</small>
+                <strong>{v.danio.charAt(0).toUpperCase() + v.danio.slice(1)} · {nombresDanio[v.danio]}</strong>
+              </div>
+            </div>
+
+            {v.descripcion && (
+              <>
+                <h3 className="subtitulo">Descripción del vendedor</h3>
+                <p className="descripcion">{v.descripcion}</p>
+              </>
+            )}
+          </div>
+
+          <div className="panel">
+            <h2>Información de la subasta</h2>
+            <div className="info-subasta">
+              <div><small>Precio base</small><strong>{quetzales(v.precioBase)}</strong></div>
+              <div><small>Inicio</small><strong>{fechaHora(v.inicio)}</strong></div>
+              <div><small>Cierre</small><strong>{fechaHora(v.fin)}</strong></div>
+              <div><small>Incremento mínimo</small><strong>10% sobre la oferta actual</strong></div>
+            </div>
           </div>
         </div>
 
-        <aside className="panel panel-subasta">
-          <h1>{v.anio} {v.marca} {v.modelo}</h1>
-          <BadgeDanio danio={v.danio} />
+        <aside className="panel-subasta">
+          <div className="panel panel-puja">
+            <Contador inicio={v.inicio} fin={v.fin} grande onCambioEstado={setEstado} />
 
-          <Contador inicio={v.inicio} fin={v.fin} grande onCambioEstado={setEstado} />
+            <div className={'oferta-actual' + (resaltar ? ' resaltar' : '')}>
+              <small>{v.ofertaActual ? 'Oferta actual' : 'Precio base'}</small>
+              <strong>{quetzales(v.ofertaActual || v.precioBase)}</strong>
+              <span>{v.totalPujas} {v.totalPujas === 1 ? 'oferta' : 'ofertas'} · base {quetzales(v.precioBase)}</span>
+            </div>
 
-          <div className={'oferta-actual' + (resaltar ? ' resaltar' : '')}>
-            <small>{v.ofertaActual ? 'Oferta actual' : 'Precio base'}</small>
-            <strong>{quetzales(v.ofertaActual || v.precioBase)}</strong>
-            <span>{v.totalPujas} {v.totalPujas === 1 ? 'oferta' : 'ofertas'} · base {quetzales(v.precioBase)}</span>
+            {usuario && v.miEstado === 'ganando' && !cerrada && (
+              <div className="estado-puja ganando">¡Vas ganando esta subasta!</div>
+            )}
+            {usuario && v.miEstado === 'superado' && !cerrada && (
+              <div className="estado-puja superado">Tu oferta ha sido superada. ¡Haz tu oferta ahora antes de que termine el tiempo!</div>
+            )}
+
+            {cerrada ? (
+              <div className={'resultado grande resultado-' + resultado}>
+                {resultado === 'vendido'
+                  ? `Oferta cerrada · Vendido en ${quetzales(v.ofertaActual)}`
+                  : 'Oferta cerrada · Subasta desierta (no se alcanzó el monto base)'}
+                {usuario && v.miEstado === 'ganando' && resultado === 'vendido' && <div>¡Ganaste esta subasta!</div>}
+              </div>
+            ) : !usuario ? (
+              <div className="bloqueo">
+                <Icono nombre="usuario" tam={28} />
+                <p>Para ofertar debes iniciar sesión.</p>
+                <Link to="/login" state={{ desde: '/vehiculo/' + id }} className="btn btn-primario">Iniciar sesión</Link>
+                <Link to="/registro" className="btn btn-borde">Crear cuenta gratis</Link>
+              </div>
+            ) : v.esMio ? (
+              <div className="bloqueo">
+                <p>Esta es tu publicación. No puedes ofertar por tu propio vehículo.</p>
+                <Link to={'/editar/' + id} className="btn btn-borde">Editar publicación</Link>
+              </div>
+            ) : estado === 'proxima' ? (
+              <div className="bloqueo"><p>La subasta aún no inicia. Podrás ofertar cuando empiece.</p></div>
+            ) : (
+              <form className="form-puja" onSubmit={ofertar}>
+                <span className="etiqueta-form">Puja rápida</span>
+                <div className="pujas-rapidas">
+                  {rapidas.map((m, i) => (
+                    <button key={i} type="button" className={'puja-rapida' + (Number(monto) === m ? ' activa' : '')} onClick={() => setMonto(String(m))}>
+                      {quetzales(m)}
+                      <small>{i === 0 ? 'mínima' : i === 1 ? '+5%' : '+15%'}</small>
+                    </button>
+                  ))}
+                </div>
+                <label>O escribe tu oferta (mínimo {quetzales(minima)})
+                  <div className="input-q">
+                    <span>Q</span>
+                    <input
+                      type="number"
+                      min={minima}
+                      value={monto}
+                      onChange={e => setMonto(e.target.value)}
+                      placeholder={String(minima)}
+                      required
+                    />
+                  </div>
+                </label>
+                <button className="btn btn-acento btn-bloque btn-ofertar" disabled={enviando}>
+                  <Icono nombre="martillo" /> {enviando ? 'Enviando...' : 'Ofertar ahora'}
+                </button>
+                <small className="nota">Las ofertas son anónimas. Cada oferta debe superar la actual por al menos 10%.</small>
+              </form>
+            )}
+
+            {mensaje && <div className={'alerta alerta-' + mensaje.tipo}>{mensaje.texto}</div>}
           </div>
 
-          {usuario && v.miEstado === 'ganando' && !cerrada && (
-            <div className="estado-puja ganando">¡Vas ganando esta subasta!</div>
-          )}
-          {usuario && v.miEstado === 'superado' && !cerrada && (
-            <div className="estado-puja superado">Tu oferta ha sido superada. ¡Haz tu oferta ahora antes de que termine el tiempo!</div>
-          )}
-
-          {cerrada ? (
-            <div className={'resultado grande resultado-' + resultado}>
-              {resultado === 'vendido'
-                ? `Oferta cerrada · Vendido en ${quetzales(v.ofertaActual)}`
-                : 'Oferta cerrada · Subasta desierta (no se alcanzó el monto base)'}
-              {usuario && v.miEstado === 'ganando' && resultado === 'vendido' && <div>¡Ganaste esta subasta!</div>}
-            </div>
-          ) : !usuario ? (
-            <div className="bloqueo">
-              <p>Para ofertar debes iniciar sesión.</p>
-              <Link to="/login" state={{ desde: '/vehiculo/' + id }} className="btn btn-primario">Iniciar sesión</Link>
-              <Link to="/registro" className="btn btn-borde">Crear cuenta</Link>
-            </div>
-          ) : v.esMio ? (
-            <div className="bloqueo">
-              <p>Esta es tu publicación. No puedes ofertar por tu propio vehículo.</p>
-              <Link to={'/editar/' + id} className="btn btn-borde">Editar publicación</Link>
-            </div>
-          ) : estado === 'proxima' ? (
-            <div className="bloqueo"><p>La subasta aún no inicia. Podrás ofertar cuando empiece.</p></div>
-          ) : (
-            <form className="form-puja" onSubmit={ofertar}>
-              <label>Tu oferta (mínimo {quetzales(v.ofertaMinima)})
-                <div className="input-q">
-                  <span>Q</span>
-                  <input
-                    type="number"
-                    min={v.ofertaMinima}
-                    value={monto}
-                    onChange={e => setMonto(e.target.value)}
-                    placeholder={String(v.ofertaMinima)}
-                    required
-                  />
-                </div>
-              </label>
-              <button type="button" className="link" onClick={() => setMonto(String(v.ofertaMinima))}>
-                Usar oferta mínima
-              </button>
-              <button className="btn btn-acento btn-bloque" disabled={enviando}>
-                {enviando ? 'Enviando...' : 'Ofertar'}
-              </button>
-              <small className="nota">Cada oferta debe superar la actual por al menos 10%.</small>
-            </form>
-          )}
-
-          {mensaje && <div className={'alerta alerta-' + mensaje.tipo}>{mensaje.texto}</div>}
-
-          <div className="historial">
+          <div className="panel historial">
             <h3>Historial de ofertas</h3>
             {v.pujas.length === 0 ? (
-              <p className="nota">Todavía no hay ofertas.</p>
+              <p className="nota">Todavía no hay ofertas. ¡Sé el primero!</p>
             ) : (
               <ul>
                 {v.pujas.slice(0, 10).map((p, i) => (
-                  <li key={p.fecha + '-' + i}>
-                    <span>{p.mia ? 'Tú' : 'Postor anónimo'}</span>
+                  <li key={p.fecha + '-' + i} className={(p.mia ? 'mia ' : '') + (i === 0 ? 'primera' : '')}>
+                    <span className="avatar-postor">{p.mia ? 'Tú' : <Icono nombre="usuario" tam={14} />}</span>
+                    <div>
+                      <span>{p.mia ? 'Tu oferta' : 'Postor anónimo'}</span>
+                      <small>{haceCuanto(p.fecha)}</small>
+                    </div>
                     <strong>{quetzales(p.monto)}</strong>
-                    <small>{fechaHora(p.fecha)}</small>
                   </li>
                 ))}
               </ul>

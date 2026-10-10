@@ -59,3 +59,18 @@ export function miniaturaDe(dataUrl) {
     img.src = dataUrl;
   });
 }
+
+// numero de lote a partir del id (para mostrarlo como en las subastas reales)
+export function numeroLote(id) {
+  let h = 0;
+  for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) % 90000;
+  return 10000 + h;
+}
+
+export function haceCuanto(ms) {
+  const s = Math.floor((Date.now() - ms) / 1000);
+  if (s < 60) return 'hace un momento';
+  if (s < 3600) return 'hace ' + Math.floor(s / 60) + ' min';
+  if (s < 86400) return 'hace ' + Math.floor(s / 3600) + ' h';
+  return 'hace ' + Math.floor(s / 86400) + ' d';
+}
